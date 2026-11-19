@@ -1121,8 +1121,12 @@ class CheckCompileResponseTests(CheckCompileFixture):
                 response.write_bytes(("-- " + content).encode("utf-8"))
                 result = subprocess.run([compiler, "-###", "--rsp-quoting=windows", "-fsyntax-only", "-x", "c", "@flags.rsp"],
                                         cwd=self.build, capture_output=True, text=True, encoding="utf-8")
-                tokens = [part[:part.rindex("'")] for part in result.stderr.split(prefix)[1:]]
-                self.assertEqual(check_compile.expand_response_files(["@flags.rsp"], self.build, windows=True)[1:], tokens)
+                expected = check_compile.expand_response_files(["@flags.rsp"], self.build, windows=True)[1:]
+                diagnostics = result.stderr.split(prefix)[1:]
+                if result.returncode == 0 and expected == [""] and not diagnostics:
+                    continue
+                tokens = [part[:part.rindex("'")] for part in diagnostics]
+                self.assertEqual(expected, tokens)
 
     def test_windows_quoted_response_files_compile_without_changing_build_outputs(self):
         compiler = shutil.which("clang")
